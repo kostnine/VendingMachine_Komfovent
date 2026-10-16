@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vending Machine</title>
+    <style>
+        body {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 24px;
+            background: #f3f3f3;
+            font-family: Arial, sans-serif;
+        }
+
+        .block {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #cccccc;
+            border-radius: 8px;
+            background: white;
+        }
+
+        #products {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .product-card {
+            width: 180px;
+            padding: 15px;
+            border: 1px solid #dddddd;
+            border-radius: 6px;
+        }
+
+        button {
+            margin: 3px;
+            padding: 7px 12px;
+            cursor: pointer;
+        }
+
+        #result {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Vending Machine</h1>
+
+    <section class="block">
+        <h2>Prekės</h2>
+        <p id="selection">Pasirinkite prekę:</p>
+        <div id="products">Uzkraunam produktus... </div>
+    </section>
+
+    <section class="block">
+        <h2>Įdėkite monetas</h2>
+        <div id="coin-button">
+            <button class= "coin-button" data-value="1"> 1 ct</button>
+            <button class= "coin-button" data-value="5"> 5 ct</button>
+            <button class= "coin-button" data-value="10"> 10 ct</button>
+            <button class= "coin-button" data-value="20"> 20 ct</button>
+            <button class= "coin-button" data-value="50"> 50 ct</button>
+        </div>
+        <p> Sumoketa: <span id="total-paid">0</span> ct</p>
+        <button id="purchase-button">Pirkti</button>
+        <p id="result"></p>
+    </section>
+
+    <section class="block">
+        <h2>Kasos monetos</h2>
+        <div id="cash-register">Kraunamas monetų likutis...</div>
+    </section>
+
+    <script>
+        let selectedProduct = null;
+        let totalPaid = 0;
+        const insertedCoins = {};
+        async function loadProducts(){
+            const response = await fetch("/api/VendingMachine/products");
+            const products = await response.json();
+            const container = document.getElementById("products");
+            container.innerHTML = products
+            .map(product => `
+            <div class="product-card">
+
+                <h2>${product.name}</h2>
+                <p>Kaina: ${product.price}</p>
+                <p>Turime: ${product.quantity}</p>
+                
+                <button class="select-product" data-name="${product.name}">
+                    Pasirinkti
+                </button>
+
+            </div>
+
+
+            `).join("");
+
+        document.querySelectorAll(".select-product").forEach(button => {
+            button.addEventListener("click", () => {
+                selectedProduct = button.dataset.name;
+
+                document.getElementById("selection").textContent =
+                    `Pasirinkta: ${selectedProduct}`;
+
+            });
+        });
+    }
+
+        async function loadCashRegister(){
+            const response = await fetch("/api/VendingMachine/cash-register");
+            const coins = await response.json();
+            const cashRegister = document.getElementById("cash-register");
+
+            cashRegister.innerHTML = coins
+                .map(coin => `<p>${coin.denomination} ct: ${coin.quantity} vnt.</p>`)
+                .join("");
+        }
+
+        document.querySelectorAll(".coin-button").forEach(button => {
+            button.addEventListener("click", async() => {
+                const value = parseInt(button.dataset.value);
+                totalPaid += value;
+                insertedCoins[value] = (insertedCoins[value] || 0) + 1;
+                document.getElementById("total-paid").textContent = totalPaid;
+            });
+        });
+
+        document.getElementById("purchase-button").addEventListener("click", async () => {
+            const resultElement = document.getElementById("result");
+            if(!selectedProduct){
+                resultElement.textContent = "Pirmiausia pasirinkite preke.";
+                return;
+            }
+
+            if(totalPaid === 0){
+                resultElement.textContent = "Pirmiausia įmeskite pinigų.";
+                return;
+            }
+
+            const coins = Object.entries(insertedCoins).map(([denomination, quantity]) => ({
+                denomination: Number(denomination),
+                quantity: quantity
+            }));
+
+            const response=await fetch("/api/VendingMachine/purchase", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    productName: selectedProduct,
+                    coins: coins
+                })
+            });
+
+            const result= await response.json();
+             if(result.success){const changeText = result.change.length >0
+                ?result.change.map(coin=> `${coin.denomination}ct x ${coin.quantity}`).join(", ")
+                :"Grazos nera"
+
+            resultElement.textContent = `Nupirkta ${selectedProduct}! Graza: ${changeText}`;
+            selectedProduct = null;
+            totalPaid = 0;
+            for (const denomination in insertedCoins){
+                delete insertedCoins[denomination];
+            }
+
+            document.getElementById("selection").textContent = "Pasirinkite prekę";
+            document.getElementById("total-paid").textContent = "0";
+            
+            await loadProducts();
+            await loadCashRegister();
+        }else {
+            resultElement.textContent = `Pirkimas nepavyko: ${result.errorMessage}`;
+        }
+        
+            
+        });
+     loadProducts();
+     loadCashRegister();
+    </script>
+</body>
+</html>

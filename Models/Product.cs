@@ -1,3 +1,7 @@
+using MyConsoleApp.Models;
+
+namespace MyConsoleApp.Models;
+
 //musu prekiu klase
 public class Product
 {

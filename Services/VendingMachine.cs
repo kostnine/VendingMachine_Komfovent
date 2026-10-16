@@ -1,10 +1,16 @@
+
+using MyConsoleApp.Models;
+using MyConsoleApp.Controllers;
+
+namespace MyConsoleApp.Services;
+
 //simuliajome aparata kuris valdo monetas ir prekes
 public class VendingMachine
 {
     private Dictionary<int, Coin> _cashRegister;
     private Dictionary<string, Product> _products;
 
-    // Sukuria naują prekybos automata
+    // Sukuria naujÄ… prekybos automata
     public VendingMachine()
     {
         _cashRegister = new Dictionary<int, Coin>();
@@ -26,7 +32,7 @@ public class VendingMachine
     }
     public string GetProductsStatus()
     {
-        var lines = new List<string>{"Prekės: "};
+        var lines = new List<string>{"PrekÄ—s: "};
         foreach(var product in _products.Values)
         {
             lines.Add($"{product}");
@@ -67,26 +73,33 @@ public class VendingMachine
            }
         }
     }
-
+    public List<Product> GetProducts()
+    {
+        return _products.Values.ToList();
+    }
+    public List<Coin> GetCoins()
+    {
+        return _cashRegister.Values.OrderByDescending(coin=>coin.Denomination).ToList();
+    }
     //pirkimo metodas
     public PurchaseResult Purchase(string productName, List<Coin> payment)
     {
         //1. Patikra ar yra preke
         if (!_products.TryGetValue(productName, out var product))
         {
-            return PurchaseResult.Failed("Prekė nerasta");
+            return PurchaseResult.Failed("PrekÄ— nerasta");
         }
         //2 patikrinti ar prekes quantity ne 0
         if (product.Quantity == 0)
         {
-            return PurchaseResult.Failed("Prekė baigėsi");
+            return PurchaseResult.Failed("PrekÄ— baigÄ—si");
         }
         //3 skaiciuojam suma kiek reikia sumoketi
         int totalPayment = payment.Sum(c => c.Denomination * c.Quantity);
         //4 tikrinam ar uztenka pinigu
         if (totalPayment < product.Price)
         {
-            return PurchaseResult.Failed("Sumokėta suma nepakanka");
+            return PurchaseResult.Failed("SumokÄ—ta suma nepakanka");
         }
         //5 pridedam mokejima
         foreach (var coin in payment)
@@ -113,7 +126,7 @@ public class VendingMachine
             return PurchaseResult.Failed("Nepavyko suskaiciuoti grazo");
         }
 
-        // Atimame grąžą iš kasos
+        // Atimame grÄ…Å¾Ä… iÅ¡ kasos
         foreach (var coin in change)
         {
             _cashRegister[coin.Denomination].Remove(coin.Quantity);

@@ -1,4 +1,10 @@
+
+using MyConsoleApp.Models;
+
+namespace MyConsoleApp.Models;
+
 //musu monetu klase
+
 public class Coin
 {
     public int Denomination { get; }

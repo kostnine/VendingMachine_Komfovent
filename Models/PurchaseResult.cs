@@ -1,3 +1,6 @@
+using MyConsoleApp.Models;
+namespace MyConsoleApp.Models;
+
 //Pirkimo rezultato klasė
 public class PurchaseResult
 {
